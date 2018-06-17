@@ -344,14 +344,77 @@ ggplot(heatmap_df, aes(filming_year, factor(filming_month))) +
 
 ```
 
+######
+Ted Speakers
+
+In this section, we will try and gain insight about all the amazing speakers who have managed to inspire millions of people through their talks on the TED Platform. The first question we shall ask in this section is who are the most popular TED Speakers. That is, which speakers have given the most number of TED Talks.
+
 ```{r}
-x <- c(12,3,6,2,3,7)
-month.abb[x]
+speaker_df <- as.data.frame(table(ted$main_speaker))
+speaker_df <- arrange(speaker_df, desc(Freq))
+speaker_df
+```
+
+Hans Rosling, the Swiss Health Professor is clearly the most popular TED Speaker, with more than 9 appearances on the TED Forum. Juan Enriquez comes a close second with 7 appearances. Rives and Marco Tempest have graced the TED platform 6 times.
+
+Which occupation should you choose if you want to become a TED Speaker? Let us have a look what kind of people TED is most interested in inviting to its events.
+
+```{r}
+occupation_df <- as.data.frame(table(ted$speaker_occupation))
+occupation_df <- arrange(occupation_df, desc(Freq))
+occupation_df <- head(occupation_df, 10)
+colnames(occupation_df) <- c("Occupation", "Appearances")
+occupation_df$Occupation <- as.character(occupation_df$Occupation)
+occupation_df$Occupation <- factor(occupation_df$Occupation, levels=occupation_df$Occupation)
+p12 <- ggplot(data = occupation_df, aes(factor(Occupation), Appearances)) +
+      geom_bar(position = "dodge", stat = "identity", color = "cyan", fill="cyan") +
+      geom_text(aes(label = Appearances), vjust = 1.6, color = "black", size = 3) +
+      tilt_theme
+p12
+```
+
+Observations
+- Writers are the most popular with more than 45 speakers identifying themselves as the aforementioned.
+- Artists and Designers come a distant second with around 35 speakers in each category.
+- This result must be taken with a pinch of salt as a considerable number of speakers identify themselves with multiple professions (for example, writer/entrepreneur). 
+
+Do some professions tend to attract a larger number of viewers? Do answer this question let us visualise the relationship between the top 10 most popular professions and the views that garnered in the form of a box plot.
+
+```{r}
+top_occupation_views <- filter(ted, ted$speaker_occupation %in% occupation_df$Occupation)
+top_occupation_views$speaker_occupation
 ```
 
 ```{r}
-heatmap_df$filming_month <- month.abb[heatmap_df$filming_month]
-heatmap_df
+p13 <- ggplot(top_occupation_views, aes(x=speaker_occupation, y=views)) + 
+  geom_boxplot() +
+  geom_jitter(shape=16, position=position_jitter(0.2)) +
+  tilt_theme
+p13 
 ```
 
+On average, out of the top 10 most popular professions, Psychologists tend to garner the most views. Writers have the greatest range of views between the first and the third quartile..
+
+Finally, let us check the number of talks which have had more than one speaker.
+
+```{r}
+speaker_count <- table(ted$num_speaker)
+speaker_count
+```
+
+Almost every talk has just one speaker. There are close to 50 talks where two people shared the stage. The maximum number of speakers to share a single stage was 5. I suspect this was a dance performance. Let's have a look.
+
+```{r}
+filter(ted, ted$num_speaker==5)
+```
+
+My hunch was correct. It is a talk titled A dance to honor Mother Earth by Jon Boogz and Lil Buck at the TED 2017 Conference.
+
+#################
+TED Events
+Which TED Events tend to hold the most number of TED.com upload worthy events? We will try to answer that question in this section.
+
+```{r}
+
+```
 
