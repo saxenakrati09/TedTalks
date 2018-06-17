@@ -121,6 +121,7 @@ multiplot(p3, p4, cols=2)
 ```
 
 ```{r}
+library(Hmisc)
 describe(ted$views)
 ```
 
@@ -154,11 +155,11 @@ From the plot above, we can see that the bulk of the talks have fewer than 500 c
 Another question that I am interested in is if the number of views is correlated with the number of comments. We should think that this is the case as more popular videos tend to have more comments. Let us find out.
 
 ```{r}
-scatter <- qplot(views,comments, data=ted)  + 
+scatter1 <- qplot(views,comments, data=ted)  + 
          scale_x_continuous(limits=c(min(ted$views),max(ted$views))) + 
          scale_y_continuous(limits=c(min(ted$comments),max(ted$comments))) + 
          geom_rug(col=rgb(.5,0,0,alpha=.2))
-scatter
+scatter1
 ```
 
 ```{r}
@@ -380,12 +381,9 @@ Observations
 
 Do some professions tend to attract a larger number of viewers? Do answer this question let us visualise the relationship between the top 10 most popular professions and the views that garnered in the form of a box plot.
 
-```{r}
-top_occupation_views <- filter(ted, ted$speaker_occupation %in% occupation_df$Occupation)
-top_occupation_views$speaker_occupation
-```
 
 ```{r}
+top_occupation_views <- filter(ted, ted$speaker_occupation %in% occupation_df$Occupation)
 p13 <- ggplot(top_occupation_views, aes(x=speaker_occupation, y=views)) + 
   geom_boxplot() +
   geom_jitter(shape=16, position=position_jitter(0.2)) +
@@ -414,7 +412,122 @@ My hunch was correct. It is a talk titled A dance to honor Mother Earth by Jon B
 TED Events
 Which TED Events tend to hold the most number of TED.com upload worthy events? We will try to answer that question in this section.
 
-```{r}
 
+```{r}
+events_df <- ted %>% select(c("event")) %>% group_by("event")
+events_df <- as.data.frame(table(events_df))
+events_df <- arrange(events_df, desc(Freq))
+events_df <- head(events_df, 10)
+
+p14 <- ggplot(data = events_df, aes(event, Freq)) +
+      geom_bar(position = "dodge", stat = "identity", color = "blue", fill="blue") +
+      geom_text(aes(label = Freq), vjust = 1.6, color = "white", size = 3) +
+      tilt_theme
+p14
 ```
+
+As expected, the official TED events held the major share of TED Talks published on the TED.com platform. TED2014 had the most number of talks followed by TED2009. There isn't too much insight to be gained from this.
+
+##############
+TED Languages
+One remarkable aspect of TED Talks is the sheer number of languages in which it is accessible. Let us perform some very basic data visualisation and descriptive statistics about languages at TED.
+
+```{r}
+describe(ted$languages)
+```
+
+On average, a TED Talk is available in 27 different languages. The maximum number of languages a TED Talk is available in is a staggering 72. Let us check which talk this is.
+
+```{r}
+filter(ted, ted$languages == 72)
+```
+
+The most translated TED Talk of all time is Matt Cutts' Try Something New in 30 Days. The talk does have a very universal theme of exploration. The sheer number of languages it's available in demands a little more inspection though as it has just over 8 million views, far fewer than the most popular TED Talks.
+
+Finally, let us check if there is a correlation between the number of views and the number of languages a talk is availbale in. We would think that this should be the case since the talk is more accessible to a larger number of people but as Matt Cutts' talk shows, it may not really be the case.
+
+```{r}
+scatter2 <- qplot(languages, views, data=ted)  + 
+         scale_y_continuous(limits=c(min(ted$views),max(ted$views))) + 
+         scale_x_continuous(limits=c(min(ted$languages),max(ted$languages))) + 
+         geom_rug(col=rgb(.5,0,0,alpha=.2))
+scatter2
+```
+
+```{r}
+cor(ted$languages, ted$views)
+```
+
+The Pearson coefficient is 0.38 suggesting a medium correlation between the aforementioned quantities.
+
+##############
+TED Themes
+In this section, we will try to find out the most popular themes in the TED conferences. Although TED started out as a conference about technology, entertainment and design, it has since diversified into virtually every field of study and walk of life. It will be interesting to see if this conference with Silicon Valley origins has a bias towards certain topics.
+
+To answer this question, we need to wrangle our data in a way that it is suitable for analysis. More specifically, we need to split the related_tags list into separate rows.
+
+```{r}
+perfect_tag <- function(x){
+  x <- unlist(strsplit(x, "'"))
+  val = x[2]
+  for (i in 3:length(x))
+    if (nchar(x[i]) >2)
+      val <- c(val, x[i])
+    return (val)
+  
+}
+ted$processed_tags <-  lapply(ted$tags, perfect_tag)
+```
+
+```{r}
+processed_tags <- ted$processed_tags
+length(processed_tags)
+processed_tags <- unlist(processed_tags, recursive=FALSE)
+length(processed_tags)
+processed_tags <- as.data.frame(table(processed_tags))
+processed_tags <- arrange(processed_tags, desc(Freq))
+head(processed_tags, 10)
+```
+
+```{r}
+processed_tags$processed_tags <- as.character(processed_tags$processed_tags)
+processed_tags$processed_tags <- factor(processed_tags$processed_tags, levels=processed_tags$processed_tags)
+p15 <- ggplot(data = head(processed_tags, 10), aes(processed_tags, Freq)) +
+      geom_bar(position = "dodge", stat = "identity", color = "blue", fill="blue") +
+      geom_text(aes(label = Freq), vjust = 1.6, color = "white", size = 3) +
+      tilt_theme
+p15
+```
+
+As may have been expected, Technology is the most popular topic for talks. The other two original factions, Design and Entertainment, also make it to the list of top 10 themes. Science and Global Issues are the second and the third most popular themes respectively.
+
+The next question I want to answer is the trends in the share of topics of TED Talks across the world. Has the demand for Technology talks increased? Do certain years have a disproportionate share of talks related to global issues? Let's find out!
+
+We will only be considering the top 7 themes, excluding TEDx and talks after 2009, the year when the number of TED Talks really peaked.
+
+```{r}
+factor_fn <- function(x){
+  return(factor(x, levels = x))
+}
+ted$processed_tags <- lapply(ted$processed_tags, unlist, recursive = FALSE)
+ted$processed_tags <- lapply(ted$processed_tags, factor_fn)
+rows_to_keep <- rep(TRUE, length(ted$processed_tags))
+for (i in 1:length(ted$processed_tags)){
+  if (any(unlist(ted$processed_tags[i]) %in% processed_tags$processed_tags[1:10])){
+    rows_to_keep[i] <- TRUE} else {
+    rows_to_keep[i] <- FALSE}
+}
+#pop_theme_talks <- filter(pop_theme_talks, any(ted$processed_tags %in% processed_tags$processed_tags[1:10]))
+#pop_theme_talks
+```
+
+
+```{r}
+pop_theme_talks <- ted[rows_to_keep,]
+pop_theme_talks <- filter(pop_theme_talks, filming_year>2008)
+```
+
+51 input
+
+
 
