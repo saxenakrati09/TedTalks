@@ -517,17 +517,139 @@ for (i in 1:length(ted$processed_tags)){
     rows_to_keep[i] <- TRUE} else {
     rows_to_keep[i] <- FALSE}
 }
-#pop_theme_talks <- filter(pop_theme_talks, any(ted$processed_tags %in% processed_tags$processed_tags[1:10]))
-#pop_theme_talks
 ```
 
 
 ```{r}
-pop_theme_talks <- ted[rows_to_keep,]
-pop_theme_talks <- filter(pop_theme_talks, filming_year>2008)
+pop_theme_talks <- subset(pop_theme_talks, filming_year>2008)
+pop_theme_talks <- pop_theme_talks[rows_to_keep,]
+
+```
+```{r}
+themes <- list(processed_tags$processed_tags[1:10])
+themes
 ```
 
-51 input
+```{r}
+colnames(pop_theme_talks)
+```
 
+```{r}
+# drop columns
+pop_theme_talks <- pop_theme_talks[, c("name", "event", "views", "filming_month", "filming_year", "processed_tags")]
+pop_theme_talks
+```
+```{r}
+x <- unlist(pop_theme_talks$processed_tags[4])
+toString(x[3])
+```
+
+```{r}
+#tag <- "technology"
+#tag <- "science"
+#tag <- "global issues"
+#tag <- "culture"
+#tag <-  "TEDx"
+#tag <- "design"
+#tag <- "business"
+#tag <-  "entertainment"
+#tag <- "health"
+#tag <- "innovation""
+count_tag <- function(vec, tag){
+  count <- 0
+  x<- unlist(vec)
+  for (i in 1:length(x)){
+    if (toString(x[i]) == tag){
+      count <- count+1
+    }
+  }
+  return (count)
+}
+
+
+```
+
+```{r}
+pop_theme_talks$technology <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "technology")
+
+pop_theme_talks$science <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "science")
+
+pop_theme_talks$gi <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "global issues")
+
+pop_theme_talks$culture <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "culture")
+
+pop_theme_talks$tedx <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "TEDx")
+
+pop_theme_talks$design <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "design")
+
+pop_theme_talks$business <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "business")
+
+pop_theme_talks$et <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "entertainment")
+
+pop_theme_talks$health <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "health")
+
+pop_theme_talks$inno <- sapply(X = pop_theme_talks$processed_tags,FUN = count_tag, tag = "innovation")
+
+```
+
+```{r}
+tag1 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$technology)[,2])
+tag2 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$science)[,2])
+tag3 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$gi)[,2])
+tag4 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$culture)[,2])
+tag5 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$tedx)[,2])
+tag6 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$design)[,2])
+tag7 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$business)[,2])
+tag8 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$et)[,2])
+tag9 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$health)[,2])
+tag10 <- as.data.frame(table(pop_theme_talks$filming_year, pop_theme_talks$inno)[,2])
+```
+
+```{r}
+tag_df <- cbind.data.frame(tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10)
+#tag_df$filming_year <- as.numeric(rownames(tag_df))
+
+tag_df <- as.data.frame(t(tag_df))
+#colnames(tag_df) <- tag_df[1, ]
+#tag_df<- tag_df[-1, ]
+#tag_df$myfactor <- factor(row.names(tag_df))
+tag_df
+```
+
+```{r}
+library(reshape2)
+library (scales)
+tag_df$row <- seq_len(nrow(tag_df))
+dat2 <- melt(tag_df, id.vars = "row")
+dat2$tag <- rep(c("technology","science","global issues", "culture", "TEDx", "design", "business", "entertainment",
+                  "health","innovation"), 9)
+p16 <- ggplot(dat2, aes(x=variable, y=value, fill=tag)) + 
+  geom_bar(stat="identity", position = "fill") +
+  xlab("\nYear") +
+  ylab("Percentage\n") +
+  scale_y_continuous(labels = percent_format()) +
+  tilt_theme
+p16
+```
+```{r}
+head(dat2)
+```
+
+```{r}
+p17 <- ggplot(dat2, aes(x=variable, y=value, colour=tag)) + 
+  geom_point(aes(x=variable, y=value, color=tag, size = tag)) +
+  tilt_theme
+p17
+```
+
+The proportion of technology talks has steadily increased over the years with a slight dip in 2010. This is understandable considering the boom of technologies such as blockchain, deep learning and augmented reality capturing people's imagination.
+
+Talks on culture have witnessed a dip, decreasing steadily starting 2013. The share of culture talks has been the least in 2017. Entertainment talks also seem to have witnessed a slight decline in popularity since 2009.
+
+Like with the speaker occupations, let us investigate if certain topics tend to garner more views than certain other topics. We will be doing this analysis for the top ten categories that we discovered in an earlier cell. As with the speaker occupations, the box plot will be used to deduce this relation.
+
+```{r}
+
+```
 
 
