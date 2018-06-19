@@ -646,10 +646,211 @@ The proportion of technology talks has steadily increased over the years with a 
 
 Talks on culture have witnessed a dip, decreasing steadily starting 2013. The share of culture talks has been the least in 2017. Entertainment talks also seem to have witnessed a slight decline in popularity since 2009.
 
-Like with the speaker occupations, let us investigate if certain topics tend to garner more views than certain other topics. We will be doing this analysis for the top ten categories that we discovered in an earlier cell. As with the speaker occupations, the box plot will be used to deduce this relation.
+##############
+Talk Duration and Word Counts
+
+In this section, we will perform analysis on the length of TED Talks. TED is famous for imposing a very strict time limit of 18 minutes. Although this is the suggested limit, there have been talks as short as 2 minutes and some have stretched to as long as 24 minutes. Let us get an idea of the distribution of TED Talk durations.
+
+```{r}
+ted$duration <- ted$duration /60
+describe(ted$duration)
+```
+
+TED Talks, on average are 13.7 minutes long. I find this statistic surprising because TED Talks are often synonymous with 18 minutes and the average is a good 3 minutes shorter than that.
+
+The shortest TED Talk on record is 2.25 minutes long whereas the longest talk is 87.6 minutes long. I'm pretty sure the longest talk was not actually a TED Talk. Let us look at both the shortest and the longest talk
+
+```{r}
+filter(ted, ted$duration == 2.25)
+```
+
+```{r}
+filter(ted, ted$duration == 2.25)
+```
+
+The shortest talk was at TED2007 titled The ancestor of language by Murray Gell-Mann. The longest talk on TED.com, as we had guessed, is not a TED Talk at all. Rather, it was a talk titled Parrots, the universe and everything delivered by Douglas Adams at the University of California in 2001.
+
+Let us now check for any correlation between the popularity and the duration of a TED Talk. To make sure we only include TED Talks, we will consider only those talks which have a duration less than 25 minutes
+
+```{r}
+scatter3 <- qplot(duration, views, data=filter(ted, ted$duration < 25))  + 
+         scale_y_continuous(limits=c(min(ted$views),max(ted$views))) + 
+         scale_x_continuous(limits=c(min(ted$duration),25)) + 
+         geom_rug(col=rgb(.5,0,0,alpha=.2))
+scatter3
+```
+```{r}
+z <- filter(ted, ted$duration <25)
+vd_cor <- cor(z$views, z$duration)
+print("Correlation between Views and duration")
+vd_cor
+```
+
+There seems to be almost no correlation between these two quantities. This strongly suggests that there is no tangible correlation between the length and the popularity of a TED Talk. Content is king at TED.
+
+Next, we look at transcripts to get an idea of word count. For this, we introduce our second dataset, the one which contains all transcripts.
+
+```{r}
+head(transcript)
+```
+```{r}
+dim(transcript)
+```
+
+It seems that we have data available for 2467 talks. Let us perform a join of the two dataframes on the url feature to include word counts for every talk.
+
+```{r}
+df_ted <- left_join(ted, transcript, by = "url")
+head(df_ted)
+```
+
+```{r}
+library(stringr)
+df_ted$transcript <- replace(df_ted$transcript,is.na(df_ted$transcript),' ')
+count_words <- function(vec){
+  return (length(unlist((str_extract_all(tolower(vec), '\\w+')))))
+}
+df_ted$word_count <- sapply(df_ted$transcript, count_words)
+
+```
+```{r}
+describe(df_ted$word_count)
+```
+
+We can see that the average TED Talk has around 1971 words and there is a significantly large standard deviation of a 1009 words. The longest talk is more than 9044 words in length.
+
+Like duration, there shouldn't be any correlation between number of words and views. We will proceed to look at a more interesting statstic: the number of words per minute.
+
+```{r}
+df_ted$wpm <- df_ted$word_count/df_ted$duration
+describe(df_ted$wpm)
+```
+
+The average TED Speaker enunciates 142 words per minute. The fastest talker spoke a staggering 247 words a minute which is much higher than the average of 125-150 words per minute in English. Let us see who this is!
+
+```{r}
+filter(df_ted, df_ted$wpm > 245)
+```
+
+Finally, in this section, I'd like to see if there is any correlation between words per minute and popularity.
+
+```{r}
+scatter4 <- qplot(wpm, views, data=filter(df_ted, df_ted$duration<25))  + 
+         scale_y_continuous(limits=c(min(df_ted$views),max(df_ted$views))) + 
+         scale_x_continuous(limits=c(min(df_ted$wpm),max(df_ted$wpm))) + 
+         geom_rug(col=rgb(.5,0,0,alpha=.2))
+scatter4
+```
+
+```{r}
+z <- filter(df_ted, df_ted$duration<25)
+vd_cor <- cor(z$views, z$wpm)
+print("Correlation between Views and words per minute")
+vd_cor
+```
+
+Again, there is practically no correlation. If you are going to give a TED Talk, you probably shouldn't worry if you're speaking a little faster or a little slower than usual.
+
+#############
+TED Ratings
+TED allows its users to rate a particular talk on a variety of metrics. We therefore have data on how many people found a particular talk funny, inspiring, creative and a myriad of other verbs. Let us inspect how this ratings dictionary actually looks like.
+
+```{r}
+rating_to_list <- function(vec){
+x <- str_extract_all(vec, "\\w+")
+x <- str_replace_all(x, "id", " ")
+x <- str_replace_all(x, "name", " ")
+x <- str_replace_all(x, "count", " ")
+x <- unlist(str_extract_all(x, "\\w+"))
+x <- setdiff(x, "c")
+return (x)
+}
+```
+```{r}
+ted$rat_list <- lapply(ted$ratings, rating_to_list)
+```
+```{r}
+unlist(ted$rat_list[1])
+which(unlist(ted$rat_list[1]) == "Beautiful")
+unlist(ted$rat_list[1])[which(unlist(ted$rat_list[1]) == "Beautiful")+1]
+```
+
+In this section, I want to find out which talks were rated the funniest, the most beautiful, the most confusing and most jaw dropping of all time. The rest is left to the reader to explore. We now need to define three extra features to accomplish this task.
+
+```{r}
+find_rating_count <- function(vec, rat_tag){
+  count <- unlist(vec)[which(unlist(vec) == rat_tag) +1]
+  return (count)
+}
+```
+```{r}
+ted$funny <- sapply(ted$rat_list, find_rating_count, rat_tag = "Funny")
+ted$funny <- replace(ted$funny,is.na(ted$funny),"0")
+ted$funny <- as.numeric(ted$funny)
+ted$funny <- replace(ted$funny,is.na(ted$funny),0)
+
+ted$beautiful <- sapply(ted$rat_list, find_rating_count, rat_tag = "Beautiful")
+ted$beautiful <- replace(ted$beautiful,is.na(ted$beautiful),"0")
+ted$beautiful <- as.numeric(ted$beautiful)
+ted$beautiful <- replace(ted$beautiful,is.na(ted$beautiful),0)
+
+ted$confusing <- sapply(ted$rat_list, find_rating_count, rat_tag = "Confusing")
+ted$confusing <- replace(ted$confusing,is.na(ted$confusing),"0")
+ted$confusing <- as.numeric(ted$confusing)
+ted$confusing <- replace(ted$confusing,is.na(ted$confusing),0)
+
+ted$jawdropping <- sapply(ted$rat_list, find_rating_count, rat_tag = "dropping")
+ted$jawdropping <- replace(ted$jawdropping,is.na(ted$jawdropping),"0")
+ted$jawdropping <- as.numeric(ted$jawdropping)
+ted$jawdropping <- replace(ted$jawdropping,is.na(ted$jawdropping),0)
+```
+```{r}
+head(ted)
+```
+
+Funniest talk of all time
 
 ```{r}
 
+ten_talks <- arrange(ted, funny)
+keeps <- c("title", "main_speaker", "views", "speaker_occupation", "film_date")
+ten_talks <- subset(ten_talks, select = c("title", "main_speaker", "views", "funny", "film_date"))
+
+last_10_talks <- ten_talks[0:10,]
+last_10_talks
+
+ten_talks <- arrange(ted, desc(funny))
+ten_talks <- subset(ten_talks, select = c("title", "main_speaker", "views", "funny", "film_date"))
+top_10_talks <- ten_talks[0:10,]
+top_10_talks
 ```
+
+Most Beautiful Talks of all time
+
+```{r}
+ten_talks <- arrange(ted, desc(beautiful))
+ten_talks <- subset(ten_talks, select = c("title", "main_speaker", "views", "beautiful", "film_date"))
+top_10_talks <- ten_talks[0:10,]
+top_10_talks
+```
+
+Most Jaw Dropping Talks of all time
+
+```{r}
+ten_talks <- arrange(ted, desc(jawdropping))
+ten_talks <- subset(ten_talks, select = c("title", "main_speaker", "views", "jawdropping", "film_date"))
+top_10_talks <- ten_talks[0:10,]
+top_10_talks
+```
+
+Most Confusing Talks of all time
+
+```{r}
+ten_talks <- arrange(ted, desc(confusing))
+ten_talks <- subset(ten_talks, select = c("title", "main_speaker", "views", "confusing", "film_date"))
+top_10_talks <- ten_talks[0:10,]
+top_10_talks
+```
+
 
 
