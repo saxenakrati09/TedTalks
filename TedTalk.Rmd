@@ -771,7 +771,7 @@ ted$rat_list <- lapply(ted$ratings, rating_to_list)
 ```
 ```{r}
 unlist(ted$rat_list[1])
-which(unlist(ted$rat_list[1]) == "Beautiful")
+which(unlist(ted$rat_list[18]) == "Beautiful")
 unlist(ted$rat_list[1])[which(unlist(ted$rat_list[1]) == "Beautiful")+1]
 ```
 
